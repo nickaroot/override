@@ -1,0 +1,11 @@
+1. ssh level00@192.168.56.101 -p 4242
+2. ls -la
+3. ./level00
+4. scp level00@192.168.56.101:/home/users/level00/level00 .
+5. open /Application/IDA Freeware 7.7/ida64.app
+6. analyze level00 ELF binary ->
+    cmp     eax, 149Ch ; 5276 in dec
+    jnz     short loc_804850D
+7. Enter password 5276
+????
+PROFIT!!!1
