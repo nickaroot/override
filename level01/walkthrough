@@ -3,7 +3,7 @@
 3. ./level01
 4. scp -P 4242 level01@192.168.56.101:/home/users/level01/level01 .
 5. open /Application/IDA Freeware 7.7/ida64.app
-6. analyze level00 ELF binary ->
+6. analyze level01 ELF binary ->
     mov     eax, offset aDatWil ; "dat_wil"
     mov     eax, offset aAdmin ; "admin"
     no shell executed... We need to inject shellcode

