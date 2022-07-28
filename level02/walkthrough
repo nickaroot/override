@@ -3,7 +3,7 @@
 3. ./level02
 4. scp -P 4242 level02@192.168.56.101:/home/users/level02/level02 .
 5. open /Application/IDA Freeware 7.7/ida64.app
-6. analyze level02 ELF binary ->
+6. analyze level03 ELF binary ->
     gets level03/.pass to rbp register, stdin printf
 7. Go crazy:
     # Generate 0..<100 pointers for printf (to print rbp register value)
