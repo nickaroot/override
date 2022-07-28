@@ -26,7 +26,7 @@
     
     vim /tmp/cases -> insert content from Pasteboard
     
-    (while read c; do echo $c | /home/users/level03/level03 && echo $c; done < /tmp/cases) | grep "Password:3224248"
+    (while read c; do echo $c | ./level03 && echo $c; done < /tmp/cases) | grep "Password:3224248"
 
 We get "Password:322424827"
 
