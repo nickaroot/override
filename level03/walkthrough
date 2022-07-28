@@ -21,7 +21,7 @@
     mov     dword ptr [esp], offset aBinSh ; "/bin/sh"
     call    _system
 
-7. We can bruteforce 21 cases — 322424824...322424845
+7. We can bruteforce 22 cases — 322424824...322424845
     echo 'for c in 322424824...322424845 { print(c) }' | swift repl | pbcopy
     
     vim /tmp/cases -> insert content from Pasteboard
