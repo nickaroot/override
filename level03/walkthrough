@@ -1,0 +1,36 @@
+1. ssh level03@192.168.56.101 -p 4242
+2. ls -la
+3. ./level03
+4. scp -P 4242 level03@192.168.56.101:/home/users/level03/level03 .
+5. open /Application/IDA Freeware 7.7/ida64.app
+6. analyze level03 ELF binary ->
+    scanf call
+    mov     eax, [esp+1Ch] ; [esp+28]
+    mov     dword ptr [esp+4], 1337D00Dh ; 322424845
+    call    test
+    ...    
+    ... -> test function
+    ...
+    cmp     [ebp+var_C], 15h ; switch 22 cases, (322424845 - %d), %d lower than 22
+    ja      def_8048773
+    ...
+    ... -> decrypt function
+    ...
+    mov     eax, offset aCongratulation ; "Congratulations!"
+    ...
+    mov     dword ptr [esp], offset aBinSh ; "/bin/sh"
+    call    _system
+
+7. We can bruteforce 21 cases — 322424824...322424845
+    echo 'for c in 322424824...322424845 { print(c) }' | swift repl | pbcopy
+    
+    vim /tmp/cases -> insert content from Pasteboard
+    
+    (while read c; do echo $c | /home/users/level03/level03 && echo $c; done < /tmp/cases) | grep "Password:3224248"
+
+We get "Password:322424827"
+
+8. /bin/sh with bruted password
+    cat /home/users/level04/.pass
+
+OK!
