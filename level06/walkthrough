@@ -1,0 +1,26 @@
+1. ssh level06@192.168.56.101 -p 4242
+2. ls -la
+3. ./level06
+
+4. scp -P 4242 level06@192.168.56.101:/home/users/level06/level06 .
+5. open /Application/IDA Freeware 7.7/ida64.app
+6. analyze level06 ELF binary ->
+    ...
+    auth function uses login hashing function to create pass (pretty dummy):
+    login must be >= 6
+    initial hash is ((int)login[3] ^ 0x1337U) + 0x5eeded
+    for each letter hash + ((int)login[i] ^ hash) % 0x539
+
+7. Australian trip
+So, there are gdb and ptrace protection, it's too expensive
+Let's just recreate C source with hash function
+
+8. Add `printf("%d", pass)` to recreated C source and run
+    >> nickaroot
+    << 6235776
+
+Authenticated!
+
+    >> cat /home/users/level07/.pass
+
+GbcPDRgsFK77LNnnuh7QyFYA2942Gp8yKj9KrWD8
