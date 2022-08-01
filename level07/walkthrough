@@ -1,7 +1,7 @@
-1. ssh level06@192.168.56.101 -p 4242
+1. ssh level07@192.168.56.101 -p 4242
 2. ls -la
-3. ./level06
-    Login and Password Auth
+3. ./level07
+
 4. scp -P 4242 level06@192.168.56.101:/home/users/level06/level06 .
 5. open /Application/IDA Freeware 7.7/ida64.app
 6. analyze level06 ELF binary ->
