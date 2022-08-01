@@ -79,7 +79,7 @@ So, we can overwrite buffer with username and attack strncpy with long text
     gdb level09
     >> info function secret_backdoor
 
-0x000000000000088c
+0x000055555555488c
 
 8. PERL!
 
